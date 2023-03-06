@@ -1,0 +1,19 @@
+{
+  "name": "order-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node app.js"
+  },
+  "dependencies": {
+    "@koa/cors": "^2.2.1",
+    "koa": "^2.7.0",
+    "koa-bodyparser": "^4.2.1",
+    "koa-router": "^7.4.0",
+    "mongoose": "^6.3.0",
+    "node-fetch": "^2.6.9"
+  },
+  "author": "",
+  "license": "ISC"
+}

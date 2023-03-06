@@ -1,0 +1,100 @@
+---
+version: '2'
+
+services:
+  # There is some issue with mongo replica set running inside docker.
+  # Other services cannot connect to it (standalone works fine).
+  # A workaround is to attach other services to mongo's network.
+  mongodb:
+    container_name: mongodb-elen
+    image: "elenfs/docker-mongo-local-replicaset:4.0"
+    ports:
+      - "27001:27001"
+      - "27002:27002"
+      - "27003:27003"
+      - "2181:2181"
+      - "9092:9092"
+      - "8081:8081"
+      - "8088:8088"
+    volumes:
+      - ./mongo-data:/mongo-data
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    network_mode: service:mongodb
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: broker
+    network_mode: service:mongodb
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'localhost:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.3.0
+    container_name: schema-registry
+    network_mode: service:mongodb
+    depends_on:
+      - zookeeper
+      - broker
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://localhost:9092"
+
+  ksqldb-server:
+    image: confluentinc/ksqldb-server:0.28.2
+    network_mode: service:mongodb
+    container_name: ksqldb-server
+    depends_on:
+      - broker
+      - schema-registry
+    volumes:
+      - "./confluent-hub-components/:/usr/share/kafka/plugins/"
+    environment:
+      KSQL_LISTENERS: "http://0.0.0.0:8088"
+      KSQL_BOOTSTRAP_SERVERS: "localhost:9092"
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://localhost:8081"
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+      KSQL_CONNECT_GROUP_ID: "ksql-connect-cluster"
+      KSQL_CONNECT_BOOTSTRAP_SERVERS: "localhost:9092"
+      KSQL_CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      KSQL_CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+      KSQL_CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://localhost:8081"
+      KSQL_CONNECT_CONFIG_STORAGE_TOPIC: "_ksql-connect-configs"
+      KSQL_CONNECT_OFFSET_STORAGE_TOPIC: "_ksql-connect-offsets"
+      KSQL_CONNECT_STATUS_STORAGE_TOPIC: "_ksql-connect-statuses"
+      KSQL_CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      KSQL_CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      KSQL_CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KSQL_CONNECT_PLUGIN_PATH: "/usr/share/kafka/plugins"
+
+  ksqldb-cli:
+    image: confluentinc/ksqldb-cli:0.28.2
+    container_name: ksqldb-cli
+    network_mode: service:mongodb
+    depends_on:
+      - broker
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
+
+
+# MONGODB RUNNNG at localhost:27001,27002,27003
+# ZOOKEEPER RUNNING AT localhost:2181
+# KAFKA RUNNING at http://localhost:9092
+# SCHEMA REGISTRY RUNNING AT http://localhost:8081
+# KSQLDB RUNNING AT localhost:8088
