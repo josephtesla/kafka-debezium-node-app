@@ -1,0 +1,29 @@
+# Bake existing ksqldb image and install debezium connector for mongodb
+FROM confluentinc/ksqldb-server:0.28.2
+
+ARG CONFLUENT_HUB_CLIENT=/usr/share/confluent-hub-client
+ARG WORKER_CONFIGS_DIR=/etc/ksqldb/connect.properties
+ARG PLUGINS_DIR=/usr/share/kafka/plugins
+ARG DEBEZIUM_VERSION=2.0.1
+ENV CONNECT_PLUGIN_PATH="/usr/share/kafka/plugins"
+
+USER root
+
+# Install unzip
+RUN yum install unzip -y
+
+# Install Java
+RUN yum install java-1.8.0-openjdk -y
+
+# Install Confluent Hub Client
+RUN curl -O http://client.hub.confluent.io/confluent-hub-client-latest.tar.gz \
+    && rm -rf $CONFLUENT_HUB_CLIENT && mkdir -p $CONFLUENT_HUB_CLIENT \
+    && tar -xf confluent-hub-client-latest.tar.gz -C $CONFLUENT_HUB_CLIENT
+
+# Install mongodb connector plugin
+RUN rm -rf $PLUGINS_DIR && mkdir -p $PLUGINS_DIR \
+    && $CONFLUENT_HUB_CLIENT/bin/confluent-hub install \
+    --component-dir $PLUGINS_DIR \
+    --worker-configs $WORKER_CONFIGS_DIR \
+    --no-prompt \ 
+    debezium/debezium-connector-mongodb:$DEBEZIUM_VERSION

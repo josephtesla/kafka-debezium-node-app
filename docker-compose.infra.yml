@@ -16,6 +16,7 @@ services:
       - "9092:9092"
       - "8081:8081"
       - "8088:8088"
+      - "8083:8083"
     volumes:
       - ./mongo-data:/mongo-data
 
@@ -55,14 +56,15 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://localhost:9092"
 
   ksqldb-server:
-    image: confluentinc/ksqldb-server:0.28.2
+    build:
+      context: ./
+      dockerfile: Dockerfile.ksqldb
     network_mode: service:mongodb
     container_name: ksqldb-server
     depends_on:
       - broker
       - schema-registry
-    volumes:
-      - "./confluent-hub-components/:/usr/share/kafka/plugins/"
+
     environment:
       KSQL_LISTENERS: "http://0.0.0.0:8088"
       KSQL_BOOTSTRAP_SERVERS: "localhost:9092"
@@ -71,6 +73,7 @@ services:
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
       KSQL_CONNECT_GROUP_ID: "ksql-connect-cluster"
       KSQL_CONNECT_BOOTSTRAP_SERVERS: "localhost:9092"
+      KSQL_CONNECT_REST_PORT: 8083
       KSQL_CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
       KSQL_CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
       KSQL_CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://localhost:8081"
