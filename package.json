@@ -1,0 +1,12 @@
+{
+  "name": "kafka-dbz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "infra": "docker-compose -f docker-compose.infra.yml up -d",
+    "start": "node order-service/app.js"
+  },
+  "author": "",
+  "license": "ISC"
+}

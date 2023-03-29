@@ -12,6 +12,8 @@ const {
 } = require('./controllers');
 const { Customer } = require('./models');
 
+require('./kafka-setup')
+
 mongoose.connect('mongodb://localhost:27001,localhost:27002,localhost:27003/orderapp?replicaSet=rs0&retryWrites=true', { useUnifiedTopology: true })
   .then(() => console.log("Connected to Mongodb"))
   .catch(err => {
